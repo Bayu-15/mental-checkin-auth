@@ -36,20 +36,9 @@ Alasan penggunaan:
 - ✅ Filter tanggal (manual)
 - ✅ Dark mode / Light mode toggle
 - ✅ Motivasi harian otomatis
-- ✅ Export check-in ke PDF
+- ✅ Export check-in ke CSV
 - ✅ Kontrol akses pengguna
 - ✅ Desain UI responsif dan modern
-
----
-
-## 🧠 AI Support Explanation
-
-Aplikasi ini menggunakan **AI secara sederhana** dengan:
-
-- **Motivasi otomatis harian**: Skrip menampilkan motivasi berbeda setiap hari secara acak, membantu menjaga semangat pengguna.
-- **Rencana pengembangan selanjutnya**: Integrasi AI untuk memberikan rekomendasi aktivitas berdasarkan pola mood pengguna.
-
-Penggunaan AI berfungsi sebagai dukungan personalisasi dan peningkatan pengalaman pengguna (UX), yang menunjukkan penerapan teknologi secara relevan.
 
 ---
 
@@ -70,3 +59,9 @@ Penggunaan AI berfungsi sebagai dukungan personalisasi dan peningkatan pengalama
    };
    firebase.initializeApp(firebaseConfig);
    ```
+---
+## AI Support Explanation
+1. Berdiskusi terkait ide aplikasi dan struktur yang akan dibentuk
+2. mereview eror
+3. berdiskusi terkait permasalahan ketika membangun aplikasi
+4. memberikan kritik & saran dalam pengembangan
