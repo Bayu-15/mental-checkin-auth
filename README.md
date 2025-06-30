@@ -17,6 +17,8 @@ Masalah kesehatan mental sering kali tidak terlihat secara langsung, namun berda
 - **Charting**: Chart.js
 - **Export**: html2pdf.js
 - **Others**: Dark/Light Mode Toggle, Responsive Design
+- **Hosting**: Vercel
+- **AI**: IBM Granite 
 
 Alasan penggunaan:
 
@@ -62,6 +64,9 @@ Alasan penggunaan:
 ---
 ## AI Support Explanation
 1. Berdiskusi terkait ide aplikasi dan struktur yang akan dibentuk
-2. mereview eror
-3. berdiskusi terkait permasalahan ketika membangun aplikasi
-4. memberikan kritik & saran dalam pengembangan
+2. Mereview eror
+3. Berdiskusi terkait permasalahan ketika membangun aplikasi
+4. Memberikan kritik & saran dalam pengembangan
+5. Menyusun strategi hosting (Firebase & Vercel)
+6. Menyusun strategi hosting (Firebase & Vercel)
+7. Mendampingi debugging saat deploy dan testing fitur
