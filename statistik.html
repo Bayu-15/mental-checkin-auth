@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Statistik Mingguan</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container fade-in">
+      <button onclick="toggleTheme()" id="themeToggle" style="float: right">
+        🌙 Dark Mode
+      </button>
+      <h2>Statistik Mood Mingguan</h2>
+
+      <label>Pilih rentang tanggal:</label><br />
+      <input type="date" id="startDate" /> -
+      <input type="date" id="endDate" />
+      <button onclick="loadStats()">Tampilkan</button>
+      <button onclick="exportPDF()">Export PDF</button>
+
+      <canvas id="moodChart" height="300"></canvas>
+      <p id="totalCheckin"></p>
+      <p><a href="index.html">← Kembali ke Dashboard</a></p>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user) window.location.href = "login.html";
+
+      const db = firebase.firestore();
+      let chartInstance;
+
+      function loadStats() {
+        const startInput = document.getElementById("startDate").value;
+        const endInput = document.getElementById("endDate").value;
+
+        if (!startInput || !endInput) {
+          alert("Silakan pilih tanggal mulai dan akhir.");
+          return;
+        }
+
+        const start = new Date(startInput);
+        const end = new Date(endInput);
+        end.setHours(23, 59, 59, 999); // Akhir hari
+
+        const moodCounts = { "🙂": 0, "😐": 0, "😔": 0, "😡": 0, "😰": 0 };
+
+        db.collection("checkins")
+          .where("uid", "==", user.uid)
+          .where("date", ">=", firebase.firestore.Timestamp.fromDate(start))
+          .where("date", "<=", firebase.firestore.Timestamp.fromDate(end))
+          .get()
+          .then((snapshot) => {
+            snapshot.forEach((doc) => {
+              const data = doc.data();
+              if (moodCounts[data.mood] !== undefined) {
+                moodCounts[data.mood]++;
+              }
+            });
+
+            const total = Object.values(moodCounts).reduce((a, b) => a + b, 0);
+            document.getElementById("totalCheckin").innerText =
+              "Total Check-in: " + total;
+
+            const ctx = document.getElementById("moodChart").getContext("2d");
+
+            if (chartInstance) chartInstance.destroy(); // Reset grafik
+
+            chartInstance = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: [
+                  "🙂 Senang",
+                  "😐 Biasa",
+                  "😔 Sedih",
+                  "😡 Marah",
+                  "😰 Cemas",
+                ],
+                datasets: [
+                  {
+                    label: "Jumlah Check-in",
+                    data: Object.values(moodCounts),
+                    backgroundColor: [
+                      "#34d399",
+                      "#fbbf24",
+                      "#60a5fa",
+                      "#f87171",
+                      "#a78bfa",
+                    ],
+                    borderRadius: 8,
+                    barThickness: 40,
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { display: false },
+                  title: {
+                    display: true,
+                    text: "Check-in Mood (Custom Range)",
+                  },
+                },
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 },
+                    title: { display: true, text: "Jumlah" },
+                  },
+                },
+              },
+            });
+          });
+      }
+
+      function exportPDF() {
+        const chart = document.getElementById("moodChart");
+        html2pdf().from(chart).save("statistik-mood.pdf");
+      }
+
+      // Theme toggle
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark");
+        document.getElementById("themeToggle").innerText = "☀️ Light Mode";
+      }
+
+      function toggleTheme() {
+        const dark = document.body.classList.toggle("dark");
+        localStorage.setItem("theme", dark ? "dark" : "light");
+        document.getElementById("themeToggle").innerText = dark
+          ? "☀️ Light Mode"
+          : "🌙 Dark Mode";
+      }
+
+      // Auto load default: 7 hari terakhir
+      window.onload = () => {
+        const today = new Date();
+        const lastWeek = new Date();
+        lastWeek.setDate(today.getDate() - 7);
+
+        document.getElementById("startDate").value = lastWeek
+          .toISOString()
+          .split("T")[0];
+        document.getElementById("endDate").value = today
+          .toISOString()
+          .split("T")[0];
+
+        loadStats();
+      };
+    </script>
+  </body>
+</html>

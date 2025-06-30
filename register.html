@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Register - Mental Check-in</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="firebase-config.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h2>Daftar Akun</h2>
+
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="Alamat Email" />
+
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="Minimal 6 karakter" />
+
+      <button onclick="register()">Daftar</button>
+      <p>Sudah punya akun? <a href="login.html">Login di sini</a></p>
+    </div>
+
+    <script>
+      function register() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        if (!email || !password) {
+          alert("Mohon isi semua field.");
+          return;
+        }
+
+        if (password.length < 6) {
+          alert("Password minimal 6 karakter.");
+          return;
+        }
+
+        firebase
+          .auth()
+          .createUserWithEmailAndPassword(email, password)
+          .then((userCredential) => {
+            const user = userCredential.user;
+            localStorage.setItem("user", JSON.stringify(user));
+            alert("Registrasi berhasil! Anda akan diarahkan ke dashboard.");
+            window.location.href = "index.html";
+          })
+          .catch((error) => {
+            alert("Registrasi gagal: " + error.message);
+          });
+      }
+    </script>
+  </body>
+</html>

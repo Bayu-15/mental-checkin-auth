@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dashboard - Mental Check-in</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="theme-color" content="#3b82f6" />
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="firebase-config.js"></script>
+  </head>
+  <body>
+    <div class="container fade-in">
+      <button onclick="toggleTheme()" id="themeToggle" style="float: right">
+        🌙 Dark Mode
+      </button>
+      <h1>🧠 Mental Check-in</h1>
+      <p id="welcome">Selamat datang!</p>
+
+      <div id="daily-quote" class="quote-box"></div>
+
+      <div class="card">
+        <h3>Bagaimana perasaanmu hari ini?</h3>
+        <label for="mood">Mood:</label>
+        <select id="mood">
+          <option value="">-- Pilih --</option>
+          <option value="senang">🙂 Senang</option>
+          <option value="biasa">😐 Biasa</option>
+          <option value="sedih">😔 Sedih</option>
+          <option value="marah">😡 Marah</option>
+          <option value="cemas">😰 Cemas</option>
+        </select>
+
+        <label for="note">Catatan:</label>
+        <textarea
+          id="note"
+          rows="4"
+          placeholder="Ceritakan harimu..."
+        ></textarea>
+
+        <div
+          style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem"
+        >
+          <button onclick="submitEntry()">Simpan Check-in</button>
+          <button onclick="exportCSV()">📥 Export ke CSV</button>
+          <button onclick="window.location.href='statistik.html'">
+            📊 Statistik
+          </button>
+          <button onclick="logout()">Logout</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Riwayat Check-in</h3>
+
+        <!-- Filter Tanggal -->
+        <div style="margin-bottom: 1rem">
+          <label for="fromDate">Dari:</label>
+          <input type="date" id="fromDate" />
+          <label for="toDate">Sampai:</label>
+          <input type="date" id="toDate" />
+          <button onclick="loadHistory()">Filter</button>
+        </div>
+
+        <div id="entries">Memuat data...</div>
+      </div>
+    </div>
+
+    <script>
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user) {
+        window.location.href = "login.html";
+      } else {
+        document.getElementById("welcome").innerText =
+          "Selamat datang, " + user.email;
+      }
+
+      const db = firebase.firestore();
+
+      function submitEntry() {
+        const mood = document.getElementById("mood").value;
+        const note = document.getElementById("note").value;
+
+        if (!mood) {
+          alert("Pilih mood terlebih dahulu.");
+          return;
+        }
+
+        const data = {
+          uid: user.uid,
+          email: user.email,
+          mood,
+          note,
+          date: firebase.firestore.Timestamp.fromDate(new Date()),
+        };
+
+        db.collection("checkins")
+          .add(data)
+          .then(() => {
+            alert("Check-in berhasil disimpan!");
+            document.getElementById("note").value = "";
+            loadHistory();
+          })
+          .catch((err) => {
+            console.error("Gagal menyimpan:", err);
+            alert("Gagal menyimpan data.");
+          });
+      }
+
+      async function loadHistory() {
+        const container = document.getElementById("entries");
+        container.innerHTML = "<p>Memuat data...</p>";
+
+        const from = document.getElementById("fromDate").value;
+        const to = document.getElementById("toDate").value;
+
+        let query = db.collection("checkins").where("uid", "==", user.uid);
+
+        if (from) {
+          const fromDate = new Date(from);
+          fromDate.setHours(0, 0, 0, 0);
+          query = query.where(
+            "date",
+            ">=",
+            firebase.firestore.Timestamp.fromDate(fromDate)
+          );
+        }
+        if (to) {
+          const toDate = new Date(to);
+          toDate.setHours(23, 59, 59, 999);
+          query = query.where(
+            "date",
+            "<=",
+            firebase.firestore.Timestamp.fromDate(toDate)
+          );
+        }
+
+        query = query.orderBy("date", "desc");
+
+        try {
+          const snapshot = await query.get();
+
+          if (snapshot.empty) {
+            container.innerHTML = "<p>Belum ada check-in.</p>";
+            return;
+          }
+
+          let htmlContent = "";
+          window.filteredData = [];
+
+          snapshot.forEach((doc) => {
+            const { mood, note, date } = doc.data();
+            const d = date.toDate().toLocaleDateString("id-ID");
+            htmlContent += `
+              <div class="entry">
+                <p><strong>${moodLabel(mood)}</strong> - ${d}</p>
+                <p>${note || "<i>(tidak ada catatan)</i>"}</p>
+              </div>
+            `;
+            window.filteredData.push({ mood, note, date: d });
+          });
+
+          container.innerHTML = htmlContent;
+        } catch (error) {
+          console.error("Gagal memuat data:", error);
+          container.innerHTML = "<p>Terjadi kesalahan saat memuat data.</p>";
+        }
+      }
+
+      function moodLabel(mood) {
+        const moodMap = {
+          senang: "🙂 Senang",
+          biasa: "😐 Biasa",
+          sedih: "😔 Sedih",
+          marah: "😡 Marah",
+          cemas: "😰 Cemas",
+        };
+        return moodMap[mood] || mood;
+      }
+
+      function exportCSV() {
+        if (!window.filteredData || window.filteredData.length === 0) {
+          alert("Tidak ada data untuk diekspor.");
+          return;
+        }
+
+        let csvContent = "Tanggal,Mood,Catatan\n";
+        window.filteredData.forEach(({ mood, note, date }) => {
+          const moodText = moodLabel(mood);
+          const cleanNote = (note || "")
+            .replace(/(\r\n|\n|\r)/gm, " ")
+            .replace(/"/g, '""');
+          csvContent += `"${date}","${moodText}","${cleanNote}"\n`;
+        });
+
+        const blob = new Blob(["\ufeff" + csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "riwayat-checkin.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      function logout() {
+        firebase
+          .auth()
+          .signOut()
+          .then(() => {
+            localStorage.removeItem("user");
+            window.location.href = "login.html";
+          });
+      }
+
+      function toggleTheme() {
+        const dark = document.body.classList.toggle("dark");
+        localStorage.setItem("theme", dark ? "dark" : "light");
+        document.getElementById("themeToggle").innerText = dark
+          ? "☀️ Light Mode"
+          : "🌙 Dark Mode";
+      }
+
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark");
+        document.getElementById("themeToggle").innerText = "☀️ Light Mode";
+      }
+
+      const quotes = [
+        "Kamu lebih kuat dari yang kamu kira 💪",
+        "Hari ini adalah awal dari sesuatu yang hebat ✨",
+        "Tidak apa-apa merasa lelah, istirahatlah sejenak 🌿",
+        "Setiap hari adalah kesempatan baru 🌅",
+        "Jangan menyerah – versi terbaikmu sedang terbentuk 💫",
+        "Satu langkah kecil tetap sebuah kemajuan 🚶",
+        "Semua badai akan berlalu 🌈",
+        "Cintai dirimu, karena kamu pantas bahagia ❤️",
+      ];
+
+      function showDailyQuote() {
+        const today = new Date().getDate();
+        const quote = quotes[today % quotes.length];
+        document.getElementById("daily-quote").innerText = `💬 ${quote}`;
+      }
+
+      window.onload = () => {
+        loadHistory();
+        showDailyQuote();
+      };
+    </script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("service-worker.js")
+            .then((reg) => console.log("Service Worker registered", reg))
+            .catch((err) => console.error("SW registration failed", err));
+        });
+      }
+    </script>
+  </body>
+</html>
